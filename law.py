@@ -1,38 +1,34 @@
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw
 import math
-
-image=Image.open('./data/harriscorner.png')  ##change the file path
-pixel=np.array(image)
-R=[]
-for i in range(len(pixel)):
-    dim1_R=[]
-    for j in range(len(pixel[0])):
-            dim1_R.append(pixel[i][j][0])
-    R.append(dim1_R)
-R=np.array(R)
 
 def padding(R):
 
-    A=[]
-    for i in range(len(R)):
-        for j in range(len(R[0])):
-            B=[0]
-        A.append(B)
-    first_row=np.append(A,R,axis=1)
-    last_row=np.append(first_row,A,axis=1)
+    X=[]
+    for _ in range(len(R)):
+        for _ in range(len(R[0])):
+            Y=[0]
+        X.append(Y)
+    first_row=np.append(X,R,axis=1)
+    last_row=np.append(first_row,X,axis=1)
 
-    A=[]
-    for i in range(len(last_row[0])):
-        A.append(0)
-    first_col=np.append([A],last_row,axis=0)
-    last_col=np.append(first_col,[A],axis=0)
+    X=[]
+    for _ in range(len(last_row[0])):
+        X.append(0)
+    first_col=np.append([X],last_row,axis=0)
+    last_col=np.append(first_col,[X],axis=0)
 
     return last_col
 
 def filter():
-    h=np.array([[1,0,-1],[2,0,-2],[1,0,-1]])
-    v=np.array([[1,2,1],[0,0,0],[-1,-2,-1]])
+    h=np.array([[1,0,-1],
+                [2,0,-2],
+                [1,0,-1]])
+    
+    v=np.array([[1,2,1],
+                [0,0,0],
+                [-1,-2,-1]])
+    
     return h,v
 
 
@@ -76,6 +72,12 @@ def Gaussian_blur(R):
     return row
 
 def Rs_make(image,R):
+
+    corner_number = 0
+    real_corner = 0
+    corner_coordinate = []
+    real_corner_coordinate = []
+    
     pixel=np.array(image)
     a,b=convolution(R)
     x=Gaussian_blur(a)
@@ -101,17 +103,47 @@ def Rs_make(image,R):
 ## sometimes image pixel has 4 dimension. so i use "if" and "else"
             if len(pixel[0][0])==4:
                 if Rs[i][j]>5.1*10**7:  ## 5.1*10**7 is threshold. if you want to change , you can change threshold
-                    pixel[i][j]=[255,0,0,255] ## corner points are red 
+                    # pixel[i][j]=[255,0,0,255] ## corner points are red 
+                    corner_coordinate.append([i, j])
+                    corner_number += 1
             elif len(pixel[0][0])==3:
-                if Rs[i][j]>5.1*10**7:  ## 5.1*10**7 is threshold. if you want to change , you can change threshold
-                    pixel[i][j]=[255,0,0] ## corner points are red 
-    return pixel  
+                if Rs[i][j]>5.1*10**8:  ## 5.1*10**7 is threshold. if you want to change , you can change threshold
+                    # pixel[i][j]=[255,0,0] ## corner points are red 
+                    corner_coordinate.append([i, j])
+                    corner_number += 1
+    
+    boundary = 20
+                    
+    for start in corner_coordinate :
+        for end in corner_coordinate[:] :
+            if (abs(end[0] - start[0]) < boundary and abs(end[1] - start[1]) < boundary and start != end) :
+                corner_coordinate.remove(end)
+                
+    return pixel, real_corner, corner_coordinate
 
+    
 if __name__ == '__main__' :
+    image=Image.open('./data/harriscorner.png')
+    image_pixel=np.array(image)
+    R=[]
+    for i in range(len(image_pixel)):
+        R2=[]
+        for j in range(len(image_pixel[0])):
+                R2.append(image_pixel[i][j][0])
+        R.append(R2)
+    R=np.array(R)
 
-    im=Image.fromarray(Rs_make(image,R))
+    result_image, result_corner, result_coordinate = Rs_make(image,R)
+
+    im=Image.fromarray(result_image)
+    draw = ImageDraw.Draw(im)
+    for coor in result_coordinate :
+        draw.ellipse((coor[1] - 5, coor[0] - 5, 
+                    coor[1] + 5, coor[0] + 5),
+                    outline='red')
 
     im.show()
     im.save('save.png')
-    
+
+    print(len(result_coordinate))
     print('hello world')
